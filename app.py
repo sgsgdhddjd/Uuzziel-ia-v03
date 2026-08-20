@@ -36,7 +36,7 @@ app.add_middleware(
 # =========================================================
 # Python lee tu archivo JSON para conectarse a tu Firebase
 try:
-    cred = credentials.Certificate('/etc/secrets/firebase.json")
+    cred = credentials.Certificate('/etc/secrets/firebase.json')
     firebase_admin.initialize_app(cred)
     print("[+] Conexión segura con Firebase establecida.")
 except Exception as e:
