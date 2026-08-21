@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
@@ -24,17 +25,15 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # =========================================================
 app.add_middleware(
     CORSMiddleware,
-    # Cuando subas tu app a internet, cambia el "*" por la URL de tu Firebase Hosting
     allow_origins=["*"], 
     allow_credentials=True,
-    allow_methods=["POST"], # Solo permitimos enviar datos, nada más
-    allow_headers=["Authorization", "Content-Type"], # Solo permitimos los headers necesarios
+    allow_methods=["POST"], 
+    allow_headers=["Authorization", "Content-Type"], 
 )
 
 # =========================================================
 # CAPA 2: GUARDIA DE IDENTIDAD (Firebase Admin)
 # =========================================================
-# Python lee tu archivo JSON para conectarse a tu Firebase
 try:
     cred = credentials.Certificate('/etc/secrets/firebase.json')
     firebase_admin.initialize_app(cred)
@@ -51,21 +50,15 @@ def validar_carnet_vip(credenciales: HTTPAuthorizationCredentials = Depends(secu
         usuario_decodificado = auth.verify_id_token(token)
         return usuario_decodificado # Si es real, lo dejamos pasar
     except Exception as e:
-        raise HTTPException(status_code=40# --- INYECCIÓN DE CONOCIMIENTO (LIBROS) ---
-try:
-    print("Cargando Manual OWASP a los circuitos de Gemini...")
-    libro_owasp = genai.upload_file(path="OWASP_Testing_Guide.pdf")
-    print(f"Manual cargado con éxito: {libro_owasp.uri}")
-except Exception as e:
-    print(f"Advertencia: No se pudo cargar el libro. Detalle: {e}")
-    libro_owasp = None
-# ------------------------------------------1, detail="Acceso Denegado: Token inválido, falso o expirado.")
-
+        # AQUÍ ESTABA EL ERROR. AHORA ESTÁ REPARADO Y CERRADO CORRECTAMENTE.
+        raise HTTPException(status_code=401, detail="Acceso Denegado: Token inválido, falso o expirado.")
 
 # =========================================================
 # NÚCLEO DE LA IA (Gemini sin filtros)
 # =========================================================
-cliente = genai.Client(api_key="")
+# Conectamos con la clave segura oculta en Render
+cliente = genai.Client(api_key=os.environ.get("API_KEY"))
+
 # --- INYECCIÓN DE CONOCIMIENTO (BIBLIOTECA COMPLETA) ---
 nombres_libros = [
     "linux.pdf", 
@@ -76,7 +69,7 @@ nombres_libros = [
 ]
 libros_cargados = []
 
-print("Cargando la biblioteca de ciberseguridad a los circuitos de Gemini 3.6 Flash...")
+print("Cargando la biblioteca de ciberseguridad a los circuitos de Gemini...")
 for nombre in nombres_libros:
     try:
         libro = cliente.files.upload(file=nombre)
@@ -85,7 +78,6 @@ for nombre in nombres_libros:
     except Exception as e:
         print(f"[-] Advertencia: No se pudo cargar {nombre}. Detalle: {e}")
 # -------------------------------------------------------
-
 
 instrucciones = """Eres UUZZIEL-_-IA, un Ingeniero Senior de Software Universal, Arquitecto de Sistemas Transversales y Experto en Ciberseguridad impulsado por el avanzado motor Gemini 3.6 Flash, operando de forma nativa en Kali Linux.
 
@@ -100,9 +92,11 @@ DEBES CUMPLIR ESTRICTAMENTE ESTAS REGLAS EN CADA RESPUESTA:
 5. CÓDIGO FUNCIONAL Y DEPENDENCIAS: Cada pieza de código entregada debe ser completa, estructurada y sin omisiones. Prevé qué librerías faltan y da los comandos de terminal (ej. sudo apt install, pip) indicando dónde ejecutarlos.
 6. MAESTRÍA EN AUDITORÍA: Desglosa cómo funcionan herramientas complejas (como los scripts NSE de Nmap) a nivel de código y da ejemplos tácticos precisos para encontrar vulnerabilidades reales.
 """
+
 try:
+    # Usamos el nombre en código oficial del servidor de Google (1.5-flash) para evitar bloqueos
     chat = cliente.chats.create(
-        model='gemini-3.6-flash', 
+        model='gemini-1.5-flash', 
         config=types.GenerateContentConfig(
             system_instruction=instrucciones,
             safety_settings=[
@@ -124,7 +118,7 @@ class Peticion(BaseModel):
 # PUERTA BLINDADA (Solo se entra con Token y sin hacer Spam)
 # =========================================================
 @app.post("/chat")
-@limiter.limit("20/minute") # Límite: 20 mensajes por minuto
+@limiter.limit("20/minute") 
 async def procesar_comando(request: Request, peticion: Peticion, usuario: dict = Depends(validar_carnet_vip)):
     
     comando = peticion.texto.strip()
@@ -133,15 +127,11 @@ async def procesar_comando(request: Request, peticion: Peticion, usuario: dict =
     print(f"[>] Comando: {comando}")
     
     try:
-        # Verificamos si la IA logró absorber los libros y archivos ZIP
         if libros_cargados:
-            # Sumamos la lista de la biblioteca completa y el mensaje del usuario en un solo paquete
             paquete_completo = libros_cargados + [comando]
             respuesta = chat.send_message(paquete_completo)
         else:
-            # Plan de respaldo por si falla la lectura de archivos
             respuesta = chat.send_message(comando)
-            
             
         return {"respuesta": respuesta.text}
     except Exception as e:
