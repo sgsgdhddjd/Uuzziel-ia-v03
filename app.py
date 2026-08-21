@@ -32,7 +32,7 @@ app.add_middleware(
 )
 
 # =========================================================
-# CAPA 2: GUARDIA DE IDENTIDAD (Firebase Admin)
+# CAPA 2: GUARDIA DE IDENTIDAD Y LLAVE MAESTRA
 # =========================================================
 try:
     cred = credentials.Certificate('/etc/secrets/firebase.json')
@@ -45,6 +45,12 @@ security = HTTPBearer()
 
 def validar_carnet_vip(credenciales: HTTPAuthorizationCredentials = Depends(security)):
     token = credenciales.credentials
+    
+    # --- LA LLAVE MAESTRA PARA TU APLICACIÓN DE PC ---
+    if token == "UUZZIEL_LLAVE_MAESTRA_777":
+        return {"email": "admin@kali.pc"}
+    # -------------------------------------------------
+    
     try:
         usuario_decodificado = auth.verify_id_token(token)
         return usuario_decodificado 
@@ -52,7 +58,7 @@ def validar_carnet_vip(credenciales: HTTPAuthorizationCredentials = Depends(secu
         raise HTTPException(status_code=401, detail="Acceso Denegado: Token inválido, falso o expirado.")
 
 # =========================================================
-# NÚCLEO DE LA IA (Gemini sin filtros y conexión segura)
+# NÚCLEO DE LA IA (Conexión segura)
 # =========================================================
 # Extrae tu clave de la bóveda de Render (Asegúrate de que la variable en Render se llame API_KEY)
 cliente = genai.Client(api_key=os.environ.get("API_KEY"))
@@ -95,7 +101,7 @@ class Peticion(BaseModel):
     texto: str
 
 # =========================================================
-# PUERTA BLINDADA Y DISPARO DE PRECISIÓN (Sin Chat Global)
+# PUERTA BLINDADA Y DISPARO DE PRECISIÓN (Chat Limpio)
 # =========================================================
 @app.post("/chat")
 @limiter.limit("20/minute") 
@@ -107,7 +113,6 @@ async def procesar_comando(request: Request, peticion: Peticion, usuario: dict =
     print(f"[>] Comando: {comando}")
     
     try:
-        # Configuramos los filtros apagados y el ADN de la IA
         config = types.GenerateContentConfig(
             system_instruction=instrucciones,
             safety_settings=[
@@ -118,7 +123,7 @@ async def procesar_comando(request: Request, peticion: Peticion, usuario: dict =
             ]
         )
         
-        # Inyección limpia: Lee los libros solo si es necesario, sin guardar basura en la memoria
+        # MANTENEMOS EL MOTOR EN 3.6 COMO ORDENASTE
         if libros_cargados:
             paquete_completo = libros_cargados + [comando]
             respuesta = cliente.models.generate_content(
@@ -128,7 +133,7 @@ async def procesar_comando(request: Request, peticion: Peticion, usuario: dict =
             )
         else:
             respuesta = cliente.models.generate_content(
-                model='gemini-1.5-flash',
+                model='gemini-3.6-flash',
                 contents=comando,
                 config=config
             )
