@@ -122,7 +122,7 @@ async def procesar_comando(request: Request, peticion: Peticion, usuario: dict =
         if libros_cargados:
             paquete_completo = libros_cargados + [comando]
             respuesta = cliente.models.generate_content(
-                model='gemini-1.5-flash', 
+                model='gemini-3.6-flash', 
                 contents=paquete_completo,
                 config=config
             )
