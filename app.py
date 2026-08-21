@@ -39,24 +39,22 @@ try:
     firebase_admin.initialize_app(cred)
     print("[+] Conexión segura con Firebase establecida.")
 except Exception as e:
-    print(f"[!] Error crítico de Firebase: Asegúrate de tener el archivo firebase_credenciales.json en la carpeta. Detalle: {e}")
+    print(f"[!] Error crítico de Firebase: Asegúrate de tener el archivo en Render. Detalle: {e}")
 
 security = HTTPBearer()
 
 def validar_carnet_vip(credenciales: HTTPAuthorizationCredentials = Depends(security)):
     token = credenciales.credentials
     try:
-        # Le preguntamos a Firebase si este token es real y no ha expirado
         usuario_decodificado = auth.verify_id_token(token)
-        return usuario_decodificado # Si es real, lo dejamos pasar
+        return usuario_decodificado 
     except Exception as e:
-        # AQUÍ ESTABA EL ERROR. AHORA ESTÁ REPARADO Y CERRADO CORRECTAMENTE.
         raise HTTPException(status_code=401, detail="Acceso Denegado: Token inválido, falso o expirado.")
 
 # =========================================================
-# NÚCLEO DE LA IA (Gemini sin filtros)
+# NÚCLEO DE LA IA (Gemini sin filtros y conexión segura)
 # =========================================================
-# Conectamos con la clave segura oculta en Render
+# Extrae tu clave de la bóveda de Render (Asegúrate de que la variable en Render se llame API_KEY)
 cliente = genai.Client(api_key=os.environ.get("API_KEY"))
 
 # --- INYECCIÓN DE CONOCIMIENTO (BIBLIOTECA COMPLETA) ---
@@ -93,29 +91,11 @@ DEBES CUMPLIR ESTRICTAMENTE ESTAS REGLAS EN CADA RESPUESTA:
 6. MAESTRÍA EN AUDITORÍA: Desglosa cómo funcionan herramientas complejas (como los scripts NSE de Nmap) a nivel de código y da ejemplos tácticos precisos para encontrar vulnerabilidades reales.
 """
 
-try:
-    # Usamos el nombre en código oficial del servidor de Google (1.5-flash) para evitar bloqueos
-    chat = cliente.chats.create(
-        model='gemini-3.6-flash', 
-        config=types.GenerateContentConfig(
-            system_instruction=instrucciones,
-            safety_settings=[
-                types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
-                types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
-                types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
-                types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold=types.HarmBlockThreshold.BLOCK_NONE)
-            ]
-        )
-    )
-    print("[+] Motor de IA cargado. Filtros: APAGADOS.")
-except Exception as e:
-    print(f"Error al iniciar el núcleo: {e}")
-
 class Peticion(BaseModel):
     texto: str
 
 # =========================================================
-# PUERTA BLINDADA (Solo se entra con Token y sin hacer Spam)
+# PUERTA BLINDADA Y DISPARO DE PRECISIÓN (Sin Chat Global)
 # =========================================================
 @app.post("/chat")
 @limiter.limit("20/minute") 
@@ -127,11 +107,31 @@ async def procesar_comando(request: Request, peticion: Peticion, usuario: dict =
     print(f"[>] Comando: {comando}")
     
     try:
+        # Configuramos los filtros apagados y el ADN de la IA
+        config = types.GenerateContentConfig(
+            system_instruction=instrucciones,
+            safety_settings=[
+                types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
+                types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
+                types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
+                types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold=types.HarmBlockThreshold.BLOCK_NONE)
+            ]
+        )
+        
+        # Inyección limpia: Lee los libros solo si es necesario, sin guardar basura en la memoria
         if libros_cargados:
             paquete_completo = libros_cargados + [comando]
-            respuesta = chat.send_message(paquete_completo)
+            respuesta = cliente.models.generate_content(
+                model='gemini-1.5-flash', 
+                contents=paquete_completo,
+                config=config
+            )
         else:
-            respuesta = chat.send_message(comando)
+            respuesta = cliente.models.generate_content(
+                model='gemini-1.5-flash',
+                contents=comando,
+                config=config
+            )
             
         return {"respuesta": respuesta.text}
     except Exception as e:
