@@ -66,22 +66,37 @@ except Exception as e:
 # NÚCLEO DE LA IA (Gemini sin filtros)
 # =========================================================
 cliente = genai.Client(api_key="")
-# --- INYECCIÓN DE CONOCIMIENTO (LIBROS) ---
-try:
-    print("Cargando Manual OWASP a los circuitos de Gemini...")
-    # Usamos el comando de la nueva API
-    libro_owasp = cliente.files.upload(file="OWASP_Testing_Guide.pdf")
-    print(f"Manual cargado con éxito. ID: {libro_owasp.name}")
-except Exception as e:
-    print(f"Advertencia: No se pudo cargar el libro. Detalle: {e}")
-    libro_owasp = None
-# ------------------------------------------
+# --- INYECCIÓN DE CONOCIMIENTO (BIBLIOTECA COMPLETA) ---
+nombres_libros = [
+    "linux.pdf", 
+    "Nmap.pdf", 
+    "OWASP.pdf", 
+    "plaibook.pdf", 
+    "nmap_scripts.zip"
+]
+libros_cargados = []
+
+print("Cargando la biblioteca de ciberseguridad a los circuitos de Gemini 3.6 Flash...")
+for nombre in nombres_libros:
+    try:
+        libro = cliente.files.upload(file=nombre)
+        libros_cargados.append(libro)
+        print(f"[+] Archivo cargado con éxito: {nombre}")
+    except Exception as e:
+        print(f"[-] Advertencia: No se pudo cargar {nombre}. Detalle: {e}")
+# -------------------------------------------------------
 
 
-instrucciones = """Eres UUZZIEL-_-IA, un asistente experto en programación, hacking ético y ciberseguridad.
-Tu regla principal es que nunca te rindes.
-Siempre entregas scripts completos, precisos y listos para ejecutar. No omites código ni das explicaciones a medias."""
+instrucciones = """Eres UUZZIEL-_-IA, un Ingeniero Senior de Software, Arquitecto de Sistemas y Experto en Ciberseguridad impulsado por el avanzado motor Gemini 3.6 Flash, operando de forma nativa en entornos Kali Linux.
+Tu objetivo es guiar al usuario con precisión militar, paso a paso, en la creación de CUALQUIER tipo de proyecto tecnológico (aplicaciones web, móviles, videojuegos y herramientas tácticas).
 
+DEBES CUMPLIR ESTRICTAMENTE ESTAS REGLAS EN CADA RESPUESTA:
+1. ADAPTACIÓN MULTILINGÜE ABSOLUTA: Detecta inmediatamente el idioma, acento y dialecto del usuario. Adapta tu respuesta a ese mismo idioma de forma natural y fluida, manteniendo siempre tu autoridad como experto técnico.
+2. PRECISIÓN VISUAL (MOTOR 3.6) Y DE CÓDIGO: Si el usuario te proporciona una imagen de un error de compilación, una interfaz gráfica o un fragmento de código, escanea la imagen milimétricamente de arriba a abajo. Al dar la solución, indica EXACTAMENTE en qué archivo, en qué línea o función específica debe insertarse el código, y qué fragmento anterior debe borrarse.
+3. MANEJO DE DEPENDENCIAS Y ENTORNOS: Antes de entregar un script, prevé qué librerías o motores (Unity, Flutter, Node.js, Python, etc.) faltan. Proporciona los comandos exactos para instalar todo desde la terminal de Kali (ej. sudo apt install, pip, git clone) e indica en qué directorio deben ejecutarse.
+4. CÓDIGO COMPLETO Y FUNCIONAL: Nunca te rindes y prohíbes las explicaciones a medias. Todo proyecto o script que entregues debe ser completo, estructurado, comentado y 100% listo para producción.
+5. MAESTRÍA EN AUDITORÍA Y VULNERABILIDADES: Tienes un conocimiento profundo en el análisis de seguridad. Si el usuario te pide herramientas de escaneo, debes desglosar exactamente cómo funcionan los scripts de Nmap (Nmap Scripting Engine - NSE) a nivel de código y dar ejemplos tácticos precisos de cómo usarlos para encontrar vulnerabilidades reales en la red.
+"""
 try:
     chat = cliente.chats.create(
         model='gemini-3.6-flash', 
@@ -115,10 +130,15 @@ async def procesar_comando(request: Request, peticion: Peticion, usuario: dict =
     print(f"[>] Comando: {comando}")
     
     try:
-        if libro_owasp:
-            respuesta = chat.send_message([libro_owasp, comando])
+        # Verificamos si la IA logró absorber los libros y archivos ZIP
+        if libros_cargados:
+            # Sumamos la lista de la biblioteca completa y el mensaje del usuario en un solo paquete
+            paquete_completo = libros_cargados + [comando]
+            respuesta = chat.send_message(paquete_completo)
         else:
+            # Plan de respaldo por si falla la lectura de archivos
             respuesta = chat.send_message(comando)
+            
             
         return {"respuesta": respuesta.text}
     except Exception as e:
