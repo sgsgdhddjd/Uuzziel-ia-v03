@@ -12,7 +12,7 @@ from google.genai import types
 
 # =========================================================
 # CAPA 3: ESCUDO ANTI-SPAM (Rate Limiter)
-# Bloquea por IP si envían más de 5 mensajes por minuto
+# Bloquea por IP si envían más de 20 mensajes por minuto
 # =========================================================
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
@@ -51,13 +51,32 @@ def validar_carnet_vip(credenciales: HTTPAuthorizationCredentials = Depends(secu
         usuario_decodificado = auth.verify_id_token(token)
         return usuario_decodificado # Si es real, lo dejamos pasar
     except Exception as e:
-        raise HTTPException(status_code=401, detail="Acceso Denegado: Token inválido, falso o expirado.")
+        raise HTTPException(status_code=40# --- INYECCIÓN DE CONOCIMIENTO (LIBROS) ---
+try:
+    print("Cargando Manual OWASP a los circuitos de Gemini...")
+    libro_owasp = genai.upload_file(path="OWASP_Testing_Guide.pdf")
+    print(f"Manual cargado con éxito: {libro_owasp.uri}")
+except Exception as e:
+    print(f"Advertencia: No se pudo cargar el libro. Detalle: {e}")
+    libro_owasp = None
+# ------------------------------------------1, detail="Acceso Denegado: Token inválido, falso o expirado.")
 
 
 # =========================================================
 # NÚCLEO DE LA IA (Gemini sin filtros)
 # =========================================================
 cliente = genai.Client(api_key="")
+# --- INYECCIÓN DE CONOCIMIENTO (LIBROS) ---
+try:
+    print("Cargando Manual OWASP a los circuitos de Gemini...")
+    # Usamos el comando de la nueva API
+    libro_owasp = cliente.files.upload(file="OWASP_Testing_Guide.pdf")
+    print(f"Manual cargado con éxito. ID: {libro_owasp.name}")
+except Exception as e:
+    print(f"Advertencia: No se pudo cargar el libro. Detalle: {e}")
+    libro_owasp = None
+# ------------------------------------------
+
 
 instrucciones = """Eres UUZZIEL-_-IA, un asistente experto en programación, hacking ético y ciberseguridad.
 Tu regla principal es que nunca te rindes.
@@ -87,7 +106,7 @@ class Peticion(BaseModel):
 # PUERTA BLINDADA (Solo se entra con Token y sin hacer Spam)
 # =========================================================
 @app.post("/chat")
-@limiter.limit("5/minute") # Límite: 5 mensajes por minuto
+@limiter.limit("20/minute") # Límite: 20 mensajes por minuto
 async def procesar_comando(request: Request, peticion: Peticion, usuario: dict = Depends(validar_carnet_vip)):
     
     comando = peticion.texto.strip()
@@ -96,7 +115,11 @@ async def procesar_comando(request: Request, peticion: Peticion, usuario: dict =
     print(f"[>] Comando: {comando}")
     
     try:
-        respuesta = chat.send_message(comando)
+        if libro_owasp:
+            respuesta = chat.send_message([libro_owasp, comando])
+        else:
+            respuesta = chat.send_message(comando)
+            
         return {"respuesta": respuesta.text}
     except Exception as e:
         print(f"[!] Error procesando comando: {e}")
