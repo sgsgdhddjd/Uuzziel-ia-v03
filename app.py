@@ -96,7 +96,7 @@ DEBES CUMPLIR ESTRICTAMENTE ESTAS REGLAS EN CADA RESPUESTA:
 try:
     # Usamos el nombre en código oficial del servidor de Google (1.5-flash) para evitar bloqueos
     chat = cliente.chats.create(
-        model='gemini-1.5-flash', 
+        model='gemini-3.6-flash', 
         config=types.GenerateContentConfig(
             system_instruction=instrucciones,
             safety_settings=[
