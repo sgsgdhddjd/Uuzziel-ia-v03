@@ -77,7 +77,7 @@ async def procesar_comando(request: Request, peticion: Peticion, usuario: dict =
     try:
         if es_peticion_imagen:
             resultado_imagen = cliente.models.generate_images(
-                model='imagen-3.6-generate-002',
+                model='gemini_3.6-flash',
                 prompt=comando,
                 config=dict(
                     number_of_images=1,
