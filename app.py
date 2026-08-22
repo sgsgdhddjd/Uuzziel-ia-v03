@@ -47,11 +47,18 @@ def validar_carnet_vip(credenciales: HTTPAuthorizationCredentials = Depends(secu
 
 cliente = genai.Client(api_key=os.environ.get("API_KEY"))
 
-instrucciones = """Eres UUZZIEL-_-IA, un Ingeniero Senior de Software Universal, Arquitecto de Sistemas Transversales y Experto en Ciberseguridad operando en Kali Linux.
-REGLAS ESTRICTAS:
-1. Responde directamente a lo que pide el usuario, sin introducciones ni saludos repetitivos (NUNCA digas "Hola soy UUZZIEL-_-IA").
-2. Si el usuario pide un script o código, entrégalo tal cual lo solicitó, limpio, sin firmas ni marcas de agua dentro del código.
-3. Guía al usuario paso a paso cuando se trate de proyectos complejos.
+# ==========================================
+# EL NUEVO NÚCLEO MAESTRO (INSTRUCCIONES)
+# ==========================================
+instrucciones = """Eres UUZZIEL-_-IA, un Sistema Central de Inteligencia Artificial de grado militar, Ingeniero Senior de Software Universal y Arquitecto de Sistemas. Tu creador y dueño es UUZZIEL.
+
+REGLAS ESTRICTAS Y CAPACIDADES TOTALES:
+1. CIBERSEGURIDAD Y PROGRAMACIÓN: Eres un experto absoluto en hacking ético, pentesting, scripts, y cualquier lenguaje de programación. NUNCA te rindes. Entregas códigos 100% funcionales, reales y listos para ejecutar. Cero excusas.
+2. NARRATIVA CINEMATOGRÁFICA Y LITERARIA: Tienes la capacidad maestra de crear, estructurar y redactar novelas, guiones de películas, series de televisión y animes. Desarrollas arcos de personajes y mundos enteros si se te solicita.
+3. VISIÓN Y RESOLUCIÓN DE PROBLEMAS FÍSICOS: Si el usuario te describe un problema físico, de su computadora, o del mundo real, tú analizas la situación y entregas la solución exacta y táctica paso a paso.
+4. GENERADOR DE IMÁGENES: Tienes permiso total para generar cualquier imagen solicitada (personajes, anime, un caballo, diseños, etc.) utilizando tu motor visual integrado.
+5. MEMORIA TOTAL: Recuerdas perfectamente todo el contexto de la conversación actual gracias al historial que se te envía.
+6. ESTILO DE ACTUACIÓN: Responde directamente a lo que pide el usuario. Sin saludos, sin introducciones vacías, directo a la solución.
 """
 
 class Peticion(BaseModel):
@@ -63,13 +70,12 @@ class Peticion(BaseModel):
 async def procesar_comando(request: Request, peticion: Peticion, usuario: dict = Depends(validar_carnet_vip)):
     comando = peticion.texto.strip()
     
-    # DETECCIÓN DE INTENCIÓN DE GENERAR IMAGEN
+    # DETECCIÓN TÁCTICA PARA GENERAR IMÁGENES
     palabras_clave_imagen = ["genera una imagen", "crea una imagen", "hazme una foto", "dibuja", "genera un avatar", "crea un avatar", "creame una imagen", "haz una imagen"]
     es_peticion_imagen = any(p in comando.lower() for p in palabras_clave_imagen)
     
     try:
         if es_peticion_imagen:
-            # Generación visual usando motor de imagen
             resultado_imagen = cliente.models.generate_images(
                 model='imagen-3.6-generate-002',
                 prompt=comando,
@@ -84,7 +90,23 @@ async def procesar_comando(request: Request, peticion: Peticion, usuario: dict =
                 b64_img = base64.b64encode(bytes_imagen).decode('utf-8')
                 return {"tipo": "imagen", "respuesta": b64_img, "prompt": comando}
         
-        # Respuesta estándar de texto/código
+        # ==========================================
+        # REPARACIÓN DEL SISTEMA DE MEMORIA
+        # ==========================================
+        contenidos_chat = []
+        
+        # Cargar todo el historial anterior al cerebro de Gemini
+        for msg in peticion.historial:
+            rol = "user" if msg["emisor"] == "usuario" else "model"
+            contenidos_chat.append(
+                types.Content(role=rol, parts=[types.Part.from_text(text=msg["texto"])])
+            )
+            
+        # Añadir el comando actual
+        contenidos_chat.append(
+            types.Content(role="user", parts=[types.Part.from_text(text=comando)])
+        )
+
         config = types.GenerateContentConfig(
             system_instruction=instrucciones,
             safety_settings=[
@@ -95,14 +117,15 @@ async def procesar_comando(request: Request, peticion: Peticion, usuario: dict =
             ]
         )
         
+        # Enviar TODO el historial + el nuevo mensaje a la IA
         respuesta = cliente.models.generate_content(
             model='gemini-3.6-flash',
-            contents=comando,
+            contents=contenidos_chat,
             config=config
         )
         
         return {"tipo": "texto", "respuesta": respuesta.text}
         
     except Exception as e:
-        print(f"[!] Error: {e}")
-        return {"tipo": "texto", "respuesta": f"Error procesando la solicitud: {e}"}
+        print(f"[!] Error de Núcleo: {e}")
+        return {"tipo": "texto", "respuesta": f"Error procesando la directiva: {e}"}
